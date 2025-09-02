@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "main": "./casts/workflow.py:main_workflow",
+    "cast_name": "./casts/cast_name/workflow.py:cast_name_workflow"
+  },
+  "env": ".env"
+}
