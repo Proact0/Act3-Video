@@ -1,10 +1,10 @@
-# Act Name
+# Act 3: Video
 
-LangGraph와 LangChain을 활용한 AX, Agentic AI System 프로젝트/프로덕트 템플릿
+LangGraph와 LangChain을 활용한 비디오 제작 에이전트 프로젝트
 
 ## 프로젝트 소개
 
-이 템플릿은 LangGraph와 LangChain을 활용한 AI 기반 프로젝트를 빠르게 시작할 수 있도록 설계되었습니다. 모듈화된 구조와 확장 가능한 워크플로우를 제공하여 다양한 AI 애플리케이션을 쉽게 개발할 수 있습니다.
+Act 3: Video는 LangChain을 활용한 AI 기반 비디오 제작 에이전트 프로젝트. 각종 플랫폼에 맞는 비디오를 제작하고 관리할 수 있는 시스템입니다.
 
 ### 주요 기능
 
@@ -27,8 +27,8 @@ LangGraph와 LangChain을 활용한 AX, Agentic AI System 프로젝트/프로덕
 #### 1. 저장소 클론
 
 ```bash
-$ git clone https://github.com/Proact0/Act-Name.git
-$ cd Act-Name
+git clone https://github.com/Proact0/Act3-Video.git
+cd Act3-Video
 ```
 
 #### 2. uv 설치 (아직 설치되지 않은 경우)
@@ -38,7 +38,7 @@ $ cd Act-Name
 #### 3. 가상 환경 셋팅
 
 ```bash
-$ uv venv
+uv venv
 ```
 
 #### 4. 개발 환경 셋팅
@@ -46,7 +46,7 @@ $ uv venv
 전체 패키지를 전부 설치하고 싶을 때
 
 ```bash
-$ uv sync --all-packages
+uv sync --all-packages
 ```
 
 #### \* 또는 특정 패키지만 설치하고 싶을 때
@@ -54,13 +54,13 @@ $ uv sync --all-packages
 - pyproject.toml의 [tool.uv.workspace] 설정을 참고하여 PACKAGE NAME에 기입
 
 ```bash
-$ uv sync --package <PACKAGE NAME>
+uv sync --package <PACKAGE NAME>
 ```
 
 > ex) cast_name의 경우
 >
 > ```bash
-> $ uv sync --package cast_name
+> uv sync --package cast_name
 > ```
 
 - langgraph.json에 노드 수정 (예: cast_name만 설치할 경우)
@@ -72,14 +72,14 @@ $ uv sync --package <PACKAGE NAME>
     "main": "./casts/workflow.py:main_workflow",
     "cast_name": "./casts/cast_name/workflow.py:cast_name_workflow"
   },
-  "env": ".env"
+  "env": ".venv"
 }
 ```
 
 #### 5. LangGraph 서버 실행
 
 ```bash
-$ uv run langgraph dev
+uv run langgraph dev
 ```
 
 ### 서버가 실행되면 다음 URL에서 접근할 수 있습니다:
@@ -112,6 +112,11 @@ $ uv run langgraph dev
 
 - **ruff**: 코드 품질 검사, 코드 포맷팅, import 문 정렬
 - **uv-lock**: 의존성 파일 동기화
+
+```
+uv run pre-commit install
+```
+
 
 > 참고:
 >
