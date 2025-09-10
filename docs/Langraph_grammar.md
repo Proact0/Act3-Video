@@ -14,12 +14,12 @@ LangGraph의 핵심 구성 요소로, 노드(Node)와 엣지(Edge)의 연결로 
 
 ```python
 from typing import TypedDict, List
+from langchain_core.messages import BaseMessage
 
 class GraphState(TypedDict):
     question: str
     generation: str
-    web_search: str
-    documents: List[str]
+    chat_history: List[BaseMessage] # 이 필드를 추가합니다.
 ```
 
 ### 1.3. 노드 (Node)
@@ -32,9 +32,12 @@ class GraphState(TypedDict):
 def generate_node(state):
     print("---GENERATE---")
     question = state["question"]
+    chat_history = state.get("chat_history", []) # 기존 기록 가져오기
+    # LLM 호출 시 chat_history를 함께 전달합니다.
     # ... LLM 호출 로직 ...
-    generation = "LangGraph is a library for building stateful, multi-actor applications with LLMs."
-    return {"generation": generation}
+    generation = "..."
+    # 응답과 업데이트된 기록을 함께 반환합니다.
+    return {"generation": generation, "chat_history": chat_history + [HumanMessage(content=question), AIMessage(content=generation)]}
 ```
 
 ### 1.4. 엣지 (Edge)
@@ -72,8 +75,6 @@ workflow.add_node("research", research_node)
 ```python
 workflow.set_entry_point("generate")
 ```
-
-### 2.4. 엣지 추가
 
 #### 일반 엣지
 
@@ -133,6 +134,16 @@ app = workflow.compile()
 
 - **`stream`**: 각 노드의 실행 결과를 실시간으로 스트리밍합니다.
 - **`invoke`**: 모든 워크플로우가 완료된 후 최종 `State`를 반환합니다.
+
+```python
+# 단일 실행
+inputs = {"question": "What is LangGraph?", "chat_history": []} # 초기 chat_history 추가
+final_state = app.invoke(inputs)
+print(final_state["generation"])
+
+# 반복 대화 예시를 추가할 수도 있습니다.
+# while 루프를 사용하여 이전 final_state의 chat_history를 다음 입력으로 사용합니다.
+```
 
 **예시:**
 
