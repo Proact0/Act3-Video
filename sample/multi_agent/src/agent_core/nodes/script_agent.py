@@ -1,10 +1,11 @@
-import os, json
-from agent_core.types import Script
+import os
+import json
+# from agent_core.types import Script
 
 def run(state):
     prompt = state.get("prompt", "")
-    duration = state.get("duration_sec", 15.0)
-    aspect = state.get("aspect", "9:16")
+    # duration = state.get("duration_sec", 15.0)
+    # aspect = state.get("aspect", "9:16")
 
     # 간단한 예시 (LLM 대신)
     beats = [

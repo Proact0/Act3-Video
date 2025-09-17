@@ -1,4 +1,5 @@
-import os, json
+import os
+import json
 
 def run(state):
     script = state.get("script", {})

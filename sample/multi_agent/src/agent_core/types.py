@@ -1,4 +1,5 @@
-from typing import Dict, List, Literal, TypedDict
+from typing import List, Literal, TypedDict
+
 
 Aspect = Literal["9:16", "1:1", "16:9"]
 
