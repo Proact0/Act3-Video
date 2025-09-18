@@ -1,8 +1,9 @@
 from langgraph.graph import StateGraph
-from agent_core.nodes import script_agent, shotlist_agent, tts_agent, image_agent, video_agent
+from multi_agent.modules import script_agent, shotlist_agent, tts_agent, image_agent, video_agent
+from .types import WorkflowState
 
 def build_graph():
-    workflow = StateGraph(dict)
+    workflow = StateGraph(WorkflowState)
 
     workflow.add_node("script", script_agent.run)
     workflow.add_node("shotlist", shotlist_agent.run)

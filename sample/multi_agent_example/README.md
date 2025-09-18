@@ -1,7 +1,7 @@
 # Multi Agent Project
 
-이 예제는 LangGraph + Streamlit 기반의 간단한 멀티에이전트 워크플로우를 보여줍니다.  
-사용자는 광고 프롬프트를 입력하면 다음 단계를 통해 최종 영상을 생성합니다:
+이 예제는 LangGraph + Streamlit 기반의 간단한 멀티에이전트 워크플로우를 보여준다.
+사용자는 광고 프롬프트를 입력하면 다음 단계를 통해 최종 영상을 생성한다.:
 
 1. Script Agent – 광고 대본 생성
 2. Shotlist Agent – 대본 기반 샷리스트 생성
@@ -15,14 +15,18 @@
 
 1. 가상환경 활성화 후 필요한 패키지 설치:
    ```bash
-   uv pip install -r requirements.txt
+   uv venv
+   uv sync
    ```
 2. 환경변수 설정.
    UNSPLASH_ACCESS_KEY=your_unsplash_api_key
+   GOOGLE_API_KEY
 3. streamlit 실행
 
 ```
-PYTHONPATH=samples/multi_agent/src streamlit run samples/multi_agent/src/ui/app_streamlit.py
+cd casts/multi_agent
+uv run --active streamlit run casts/multi_agent/app_streamlit.py
+
 ```
 
 5. 주의사항
