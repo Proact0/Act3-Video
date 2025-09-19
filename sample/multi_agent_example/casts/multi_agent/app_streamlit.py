@@ -1,11 +1,13 @@
+
 import os
-import streamlit as st
 from dotenv import load_dotenv
+import streamlit as st
+from .workflow import build_graph  # ✅ import를 위쪽으로 이동
 
 # 환경변수 로드
 load_dotenv()
 
-from workflow import build_graph
+
 
 
 prompt = st.text_area("광고 프롬프트를 입력하세요:", "치킨 광고를 만들어줘 🍗")
