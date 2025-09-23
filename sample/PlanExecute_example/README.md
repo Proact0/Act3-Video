@@ -53,6 +53,12 @@ https://ollama.com/download
 ollama pull llama3
 ```
 
+- 스트림릿과 랭그래프 실행 전 반드시 Ollma 서버가 켜져 있어야합니다.
+
+```bash
+ollama serve
+```
+
 ## 3. 실행
 
 ### langgraph dev 서버 실행
