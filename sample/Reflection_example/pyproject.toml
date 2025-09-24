@@ -1,0 +1,9 @@
+[project]
+name = "reflection-example"
+version = "0.1.0"
+dependencies = [
+    "langgraph",
+    "pydantic",
+    "streamlit",
+    "langchain-community",   # ✅ Ollama 쓸 때 필요
+]
