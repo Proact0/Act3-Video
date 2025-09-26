@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "main": "./sample/Rag_example/casts/workflow.py:rag_workflow"
+  },
+  "env": ".venv"
+}
