@@ -1,7 +1,13 @@
 {
-  "dependencies": ["."],
+  "dependencies": [
+    "langchain",
+    "langchain-community",
+    "gpt4all",
+    "langgraph",
+    "sentence-transformers",
+    "torch"
+  ],
   "graphs": {
-    "main": "./sample/Rag_example/casts/workflow.py:rag_workflow"
-  },
-  "env": ".venv"
+    "main": "./casts/workflow.py:rag_workflow"
+  }
 }
