@@ -1,11 +1,9 @@
 {
   "dependencies": [
+    "langgraph",
     "langchain",
     "langchain-community",
-    "gpt4all",
-    "langgraph",
-    "sentence-transformers",
-    "torch"
+    "langchain-text-splitters"
   ],
   "graphs": {
     "main": "./casts/workflow.py:rag_workflow"
