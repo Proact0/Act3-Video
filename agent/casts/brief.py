@@ -2,18 +2,19 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 
+
 @dataclass
 class Brief:
     product: str = ""
     message: str = ""
     target: str = ""
-    tone: List[str] = None
+    tone: List[str] | None = None
     background: str = ""
     duration_sec: int = 60
     cuts: Optional[int] = None
     narration: str = ""
     music: str = ""
-    banned_words: List[str] = None
+    banned_words: List[str] | None = None
 
     def to_prompt_dict(self) -> Dict:
         return {
@@ -35,28 +36,40 @@ class Brief:
         d["banned_words"] = self.banned_words or []
         return d
 
+
 def _split_list(val: str) -> List[str]:
     if not val:
         return []
     raw = [x.strip() for x in val.replace(";", ",").replace("/", ",").split(",")]
     return [x for x in raw if x]
 
+
 def parse_brief(text: str) -> Brief:
     mapping = {
-        "제품": "product", "product": "product",
-        "메시지": "message", "message": "message",
-        "타깃": "target", "target": "target",
-        "톤": "tone", "tone": "tone",
-        "배경": "background", "background": "background",
-        "길이": "duration_sec", "duration": "duration_sec",
-        "컷": "cuts", "cuts": "cuts",
-        "나레이션": "narration", "narration": "narration",
-        "음악": "music", "music": "music",
-        "금지어": "banned_words", "banned": "banned_words",
+        "제품": "product",
+        "product": "product",
+        "메시지": "message",
+        "message": "message",
+        "타깃": "target",
+        "target": "target",
+        "톤": "tone",
+        "tone": "tone",
+        "배경": "background",
+        "background": "background",
+        "길이": "duration_sec",
+        "duration": "duration_sec",
+        "컷": "cuts",
+        "cuts": "cuts",
+        "나레이션": "narration",
+        "narration": "narration",
+        "음악": "music",
+        "music": "music",
+        "금지어": "banned_words",
+        "banned": "banned_words",
     }
     pairs: Dict[str, str] = {}
     for chunk in text.replace(";", "\n").replace(",", "\n").splitlines():
-        if "=" not in chunk: 
+        if "=" not in chunk:
             continue
         k, v = chunk.split("=", 1)
         key = mapping.get(k.strip().lower())
@@ -69,21 +82,25 @@ def parse_brief(text: str) -> Brief:
     b.target = pairs.get("target", "")
     b.tone = _split_list(pairs.get("tone", ""))
     b.background = pairs.get("background", "")
-    try:
-        if "duration_sec" in pairs:
+
+    if "duration_sec" in pairs:
+        try:
             b.duration_sec = max(5, min(120, int(pairs["duration_sec"])))
-    except ValueError:
-        pass
-    try:
-        if "cuts" in pairs:
+        except ValueError:
+            pass
+
+    if "cuts" in pairs:
+        try:
             c = int(pairs["cuts"])
             b.cuts = max(1, min(12, c))
-    except ValueError:
-        b.cuts = None
+        except ValueError:
+            b.cuts = None
+
     b.narration = pairs.get("narration", "")
     b.music = pairs.get("music", "")
     b.banned_words = _split_list(pairs.get("banned_words", ""))
     return b
+
 
 def get_brief_guide() -> str:
     return """\
@@ -100,9 +117,13 @@ def get_brief_guide() -> str:
 금지어=다이어트, 치료
 """
 
+
 def _safe_int(text: str, default: int) -> int:
-    try: return int(text.strip())
-    except Exception: return default
+    try:
+        return int(text.strip())
+    except Exception:
+        return default
+
 
 def build_brief_interactively() -> Brief:
     print("\n[간단 입력 모드] 엔터=기본값\n")
@@ -117,13 +138,20 @@ def build_brief_interactively() -> Brief:
     narration = input("나레이션 스타일: ").strip()
     music = input("음악 키워드: ").strip()
     banned = input("금지어(쉼표 구분): ").strip()
+
     return Brief(
-        product=product, message=message, target=target,
-        tone=_split_list(tone), background=background,
+        product=product,
+        message=message,
+        target=target,
+        tone=_split_list(tone),
+        background=background,
         duration_sec=max(5, min(120, duration)),
         cuts=(max(1, min(12, cuts)) if isinstance(cuts, int) else None),
-        narration=narration, music=music, banned_words=_split_list(banned),
+        narration=narration,
+        music=music,
+        banned_words=_split_list(banned),
     )
+
 
 def brief_to_kv_lines(brief: Brief) -> str:
     lines = [
