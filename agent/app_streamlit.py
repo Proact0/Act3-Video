@@ -1,13 +1,15 @@
-# --- 스트림릿 설정은 가장 위에서 ---
-import streamlit as st
-st.set_page_config(page_title="Shortform Scenario Agent", page_icon="🎬", layout="centered")
-
-# --- 표준 임포트 ---
+# --- 표준 임포트 (E402 준수: 반드시 맨 위에) ---
 import os
 import sys
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
 from dotenv import load_dotenv
+import streamlit as st
+
+
+# --- Streamlit 설정 (import 다음에 호출) ---
+st.set_page_config(page_title="Shortform Scenario Agent", page_icon="🎬", layout="centered")
 
 
 def _bootstrap_paths() -> None:
@@ -23,10 +25,10 @@ load_dotenv()
 # 내부 모듈 임포트는 실패해도 UI가 보이도록 try/except로 감싸기
 _generate = None
 _to_text_script = None
-_import_error: str | None = None
+_import_error: Optional[str] = None
 try:
-    from casts.pipeline import generate as _generate  # noqa: E402
-    from casts.formatter import to_text_script as _to_text_script  # noqa: E402
+    from casts.pipeline import generate as _generate  # noqa: F401
+    from casts.formatter import to_text_script as _to_text_script  # noqa: F401
 except Exception as e:
     _import_error = f"{type(e).__name__}: {e}"
 
@@ -42,6 +44,7 @@ with st.sidebar:
         st.success("OPENROUTER_API_KEY: 감지됨", icon="🔑")
     else:
         st.warning("환경변수에 OPENROUTER_API_KEY가 없습니다.", icon="⚠️")
+
     equalize = st.toggle("컷 시간 균등 분배(권장)", value=True)
     out_format = st.radio("출력 형식", ["JSON", "텍스트"], horizontal=True, index=0)
     st.markdown("---")
@@ -76,8 +79,10 @@ with st.form("scenario_form"):
 
     submitted = st.form_submit_button("🚀 시나리오 생성")
 
+
 def _kv_line(k: str, v: str) -> str:
     return f"{k}={v}" if v is not None and v != "" else ""
+
 
 def _build_kv_text() -> str:
     lines = [
@@ -93,6 +98,7 @@ def _build_kv_text() -> str:
         _kv_line("금지어", banned),
     ]
     return "\n".join([x for x in lines if x])
+
 
 # ================= RUN =================
 if submitted:
