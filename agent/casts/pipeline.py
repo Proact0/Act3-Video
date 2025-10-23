@@ -1,12 +1,32 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .client import ask_openrouter
 from .brief import Brief, parse_brief
 
-SYSTEM_PROMPT = """
+# (옵션) Midjourney 프롬프트 빌더가 없을 때도 동작하도록 안전 import
+try:
+    from .mj import build_midjourney_prompt  # type: ignore
+except Exception:  # 파일이 없으면 MJ 기능만 비활성
+    build_midjourney_prompt = None  # type: ignore
+
+
+# ---------------- SYSTEM_PROMPT ----------------
+# 파일 prompts/system_prompt.txt 가 있으면 그걸 쓰고, 없으면 기본 프롬프트 사용
+def _load_system_prompt() -> str:
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    txt_path = os.path.join(os.path.dirname(here), "prompts", "system_prompt.txt")
+    if os.path.isfile(txt_path):
+        try:
+            with open(txt_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            pass
+    # 기본값 (fallback)
+    return """
 You are a short-form video scenario agent for TikTok/Reels/Shorts.
 
 Return **JSON only**:
@@ -25,7 +45,11 @@ Rules:
 - Each dialog ≤ 15 Korean characters.
 - All output in Korean, concise and visual.
 - Respect banned_words if provided (do not use them).
-"""
+""".strip()
+
+
+SYSTEM_PROMPT = _load_system_prompt()
+# ------------------------------------------------
 
 
 def _equalize_timeline(data: Dict[str, Any], duration: int, cuts: int) -> None:
@@ -63,8 +87,14 @@ def _quality_checks(data: Dict[str, Any], banned: str) -> Dict[str, Any]:
     return {"ok": len(issues) == 0, "issues": issues}
 
 
-def generate(brief_text: str, *, equalize: bool = True) -> Dict[str, Any]:
-    """엔드투엔드: 브리프 파싱 → LLM 생성 → 후처리 → 검증."""
+def generate(
+    brief_text: str,
+    *,
+    equalize: bool = True,
+    mj_generate: bool = False,
+    mj_aspect_ratio: str = "9:16",
+) -> Dict[str, Any]:
+    """엔드투엔드: 브리프 파싱 → LLM 생성 → 후처리 → 검증 (+옵션: MJ 프롬프트)."""
     brief: Brief = parse_brief(brief_text)
     brief_dict = brief.to_prompt_dict()
 
@@ -94,4 +124,14 @@ def generate(brief_text: str, *, equalize: bool = True) -> Dict[str, Any]:
 
     qc = _quality_checks(data, brief_dict.get("banned_words", ""))
     data["_quality"] = qc
+
+    # Midjourney 프롬프트(선택)
+    if mj_generate and build_midjourney_prompt:
+        try:
+            data["midjourney_prompt"] = build_midjourney_prompt(
+                brief, data, beat_index=0, aspect_ratio=mj_aspect_ratio
+            )
+        except Exception as e:
+            data["midjourney_prompt_error"] = str(e)
+
     return data
