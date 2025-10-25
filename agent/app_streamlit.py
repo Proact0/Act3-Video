@@ -34,7 +34,7 @@ except Exception as e:
 # ================= UI =================
 
 st.title("🎬 Shortform Scenario Agent")
-st.caption("OpenRouter `gpt-oss-20b:free` 기반 — 60초 쇼츠 시나리오 생성")
+st.caption("OpenRouter `gpt-oss-20b:free` 기반 — 60초 쇼츠 시나리오 생성 (MJ prompts in English)")
 
 with st.sidebar:
     st.header("⚙️ Settings")
@@ -50,7 +50,7 @@ with st.sidebar:
     out_format = st.radio("출력 형식", ["JSON", "텍스트"], horizontal=True, index=0)
 
     # Midjourney 옵션
-    generate_mj = st.toggle("Midjourney 프롬프트 생성", value=True)
+    generate_mj = st.toggle("Midjourney 프롬프트 생성(영문)", value=True)
     mj_ar = st.selectbox("MJ Aspect Ratio", ["9:16", "3:4", "1:1", "4:5"], index=0)
 
     st.markdown("---")
@@ -63,19 +63,19 @@ if _import_error:
 
 # 입력 폼
 with st.form("scenario_form"):
-    st.subheader("📝 Brief")
+    st.subheader("📝 Brief (Korean OK)")
 
     col1, col2 = st.columns(2)
     with col1:
-        product = st.text_input("제품", placeholder="예: 복숭아향 향수")
-        message = st.text_input("핵심 메시지/USP", placeholder="예: 첫사랑의 향기처럼 설렘")
-        target = st.text_input("타깃", placeholder="예: 10대~20대 여학생")
-        background = st.text_input("배경", placeholder="예: 햇살 드는 교실 창가")
+        product = st.text_input("제품", placeholder="예: 치킨")
+        message = st.text_input("핵심 메시지/USP", placeholder="예: 바삭함과 육즙")
+        target = st.text_input("타깃", placeholder="예: 10대~20대")
+        background = st.text_input("배경", placeholder="예: 퇴근길 작은 포장마차")
     with col2:
-        tone = st.text_input("톤(쉼표로 구분)", placeholder="예: 핑크, 맑음, 투명")
-        narration = st.text_input("나레이션/대사 스타일", placeholder="예: 잔잔하고 몽환적으로")
-        music = st.text_input("음악 키워드", placeholder="예: 로맨틱 피아노")
-        banned = st.text_input("금지어(쉼표로 구분)", placeholder="예: 다이어트, 치료")
+        tone = st.text_input("톤(쉼표로 구분)", placeholder="예: 따뜻함, 레트로")
+        narration = st.text_input("나레이션/대사 스타일", placeholder="예: 담백하고 현실적으로")
+        music = st.text_input("음악 키워드", placeholder="예: 어쿠스틱 기타")
+        banned = st.text_input("금지어(쉼표로 구분)", placeholder="예: 치료, 다이어트")
 
     st.markdown("### ⏱️ 길이 & 컷")
     dur_col, cuts_col = st.columns(2)
@@ -120,8 +120,8 @@ if submitted:
                 data: Dict[str, Any] = _generate(
                     brief_text,
                     equalize=equalize,
-                    mj_generate=generate_mj,       # MJ 프롬프트 생성 여부
-                    mj_aspect_ratio=mj_ar,         # MJ AR
+                    mj_generate=generate_mj,      # EN MJ prompts on
+                    mj_aspect_ratio=mj_ar,
                 )  # type: ignore
             except Exception as err:
                 st.error(f"예상치 못한 에러: {type(err).__name__}: {err}")
@@ -151,22 +151,27 @@ if submitted:
                             st.code(json.dumps(data, ensure_ascii=False, indent=2))
 
                     # MJ 프롬프트 섹션
+                    if isinstance(data, dict) and data.get("scene_prompts"):
+                        st.markdown("#### 🎬 Scene-by-Scene Prompts (English)")
+                        for i, p in enumerate(data["scene_prompts"], 1):
+                            st.markdown(f"**Scene {i}:**")
+                            st.code(p)
                     if isinstance(data, dict) and data.get("midjourney_prompt"):
-                        st.markdown("#### 🎨 Midjourney Prompt")
+                        st.markdown("#### 🎨 Main Thumbnail Prompt (English)")
                         st.code(data["midjourney_prompt"])
 
 # 하단 도움말
 with st.expander("입력 예시 보기"):
     st.code(
-        """제품=복숭아향 향수
-메시지=첫사랑의 향기처럼 설렘
-타깃=10대~20대 여학생
-톤=핑크, 맑음, 투명
-배경=햇살 드는 교실 창가
+        """제품=치킨
+메시지=바삭함과 육즙
+타깃=10대~20대
+톤=따뜻함, 레트로
+배경=퇴근길 작은 포장마차
 길이=60
 컷=6
-나레이션=잔잔하고 몽환적으로
-음악=로맨틱 피아노
-금지어=다이어트, 치료""",
+나레이션=담백하고 현실적으로
+음악=어쿠스틱 기타
+금지어=치료""",
         language="text",
     )

@@ -1,22 +1,29 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+import os
+from typing import Any, Dict
 
 from .client import ask_openrouter
 from .brief import Brief, parse_brief
 
-# (옵션) Midjourney 프롬프트 빌더가 없을 때도 동작하도록 안전 import
+# MJ 모듈은 선택 기능이므로 안전 임포트
 try:
     from .mj import build_midjourney_prompt  # type: ignore
-except Exception:  # 파일이 없으면 MJ 기능만 비활성
+except Exception:
     build_midjourney_prompt = None  # type: ignore
 
+try:
+    from .mj_scene import build_scene_prompts  # type: ignore
+except Exception:
+    build_scene_prompts = None  # type: ignore
 
-# ---------------- SYSTEM_PROMPT ----------------
-# 파일 prompts/system_prompt.txt 가 있으면 그걸 쓰고, 없으면 기본 프롬프트 사용
+
 def _load_system_prompt() -> str:
-    import os
+    """
+    prompts/system_prompt.txt 가 있으면 우선 사용.
+    없으면 내장 기본 프롬프트로 대체. (scene=설명형)
+    """
     here = os.path.dirname(os.path.abspath(__file__))
     txt_path = os.path.join(os.path.dirname(here), "prompts", "system_prompt.txt")
     if os.path.isfile(txt_path):
@@ -25,35 +32,32 @@ def _load_system_prompt() -> str:
                 return f.read()
         except Exception:
             pass
-    # 기본값 (fallback)
-    return """
-You are a short-form video scenario agent for TikTok/Reels/Shorts.
-
-Return **JSON only**:
-{
-  "duration_sec": 60,
-  "hook": "string",
-  "beats": [{"t":0,"scene":"string","dialog":"string"}],
-  "caption": "string",
-  "hashtags": ["string"]
-}
-
-Rules:
-- Keep total duration ~ user brief (default 60s).
-- Prefer 6–10 cuts unless user sets cuts explicitly (e.g., 컷=6).
-- First 3s: strong hook (emotion/question/twist).
-- Each dialog ≤ 15 Korean characters.
-- All output in Korean, concise and visual.
-- Respect banned_words if provided (do not use them).
-""".strip()
+    return (
+        "You are a short-form video scenario agent for TikTok/Reels/Shorts.\n\n"
+        "Return **JSON only**:\n"
+        "{\n"
+        '  "duration_sec": 60,\n'
+        '  "hook": "string",\n'
+        '  "beats": [{"t":0,"scene":"string","dialog":"string"}],\n'
+        '  "caption": "string",\n'
+        '  "hashtags": ["string"]\n'
+        "}\n\n"
+        "Rules (Korean output for scenario):\n"
+        "- 전체 길이는 브리프에 맞추되 기본 60초.\n"
+        "- 컷 수는 기본 6–10 (사용자가 컷 지정 시 정확히 준수).\n"
+        "- 0–3초에 강한 훅.\n"
+        "- **scene은 키워드 나열이 아닌 '설명형 문장'으로 작성** (카메라/동작/빛/분위기 포함).\n"
+        "- dialog는 15자 이내의 자연스러운 한국어 대사.\n"
+        "- caption/hashtags도 한국어.\n"
+        "- 금지어(banned_words)가 있으면 사용 금지.\n"
+    )
 
 
 SYSTEM_PROMPT = _load_system_prompt()
-# ------------------------------------------------
 
 
 def _equalize_timeline(data: Dict[str, Any], duration: int, cuts: int) -> None:
-    """균등 분배(예: 10초 간격)."""
+    """균등 분배(예: 60초/6컷 → 10초 간격)."""
     beats = data.get("beats") or []
     beats = beats[:cuts]
     while len(beats) < cuts:
@@ -94,7 +98,7 @@ def generate(
     mj_generate: bool = False,
     mj_aspect_ratio: str = "9:16",
 ) -> Dict[str, Any]:
-    """엔드투엔드: 브리프 파싱 → LLM 생성 → 후처리 → 검증 (+옵션: MJ 프롬프트)."""
+    """엔드투엔드: 브리프 파싱 → LLM 생성(설명형 scene) → 후처리 → 검증 (+MJ EN 프롬프트)."""
     brief: Brief = parse_brief(brief_text)
     brief_dict = brief.to_prompt_dict()
 
@@ -110,7 +114,7 @@ def generate(
     ]
     raw = ask_openrouter(messages)
     if isinstance(raw, dict):
-        return raw
+        return raw  # 에러 패스스루
 
     try:
         data = json.loads(raw)
@@ -125,13 +129,21 @@ def generate(
     qc = _quality_checks(data, brief_dict.get("banned_words", ""))
     data["_quality"] = qc
 
-    # Midjourney 프롬프트(선택)
-    if mj_generate and build_midjourney_prompt:
-        try:
-            data["midjourney_prompt"] = build_midjourney_prompt(
-                brief, data, beat_index=0, aspect_ratio=mj_aspect_ratio
-            )
-        except Exception as e:
-            data["midjourney_prompt_error"] = str(e)
+    # Midjourney 프롬프트(대표 썸네일 + 씬별 EN) — 선택
+    if mj_generate:
+        if build_midjourney_prompt:
+            try:
+                data["midjourney_prompt"] = build_midjourney_prompt(
+                    brief, data, beat_index=0, aspect_ratio=mj_aspect_ratio
+                )
+            except Exception as e:
+                data["midjourney_prompt_error"] = str(e)
+        if build_scene_prompts:
+            try:
+                data["scene_prompts"] = build_scene_prompts(
+                    brief, data, aspect_ratio=mj_aspect_ratio
+                )
+            except Exception as e:
+                data["scene_prompts_error"] = str(e)
 
     return data
