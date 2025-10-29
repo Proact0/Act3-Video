@@ -1,11 +1,15 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from .brief import Brief
-from .translate import to_en_list
+
+ANIM2D_STYLE = (
+    "2D animation, anime-inspired, cel shading, clean line art, flat colors, "
+    "toon shading, high detail"
+)
 
 BASE_STYLE = (
-    "cinematic lighting, ultra realistic, volumetric light, soft focus, film still, "
+    "cinematic lighting, soft focus, film still, "
     "8k resolution, depth of field, masterpiece"
 )
 
@@ -16,37 +20,23 @@ def build_midjourney_prompt(
     *,
     aspect_ratio: str = "9:16",
     version: str = "6.0",
-    stylize: int = 250,
     quality: float = 1.0,
     seed: Optional[int] = None,
 ) -> str:
-    beats = scenario.get("beats") or []
-    beat = beats[beat_index] if beats else {}
-    product_en = to_en_list([brief.product or "main product"])[0]
-    message_en = to_en_list([brief.message or ""])[0] if brief.message else ""
-    target_en = to_en_list([brief.target or ""])[0] if brief.target else ""
-    scene_en = to_en_list([beat.get("scene") or brief.background or "clean studio backdrop"])[0]
-    tone_en = ", ".join(to_en_list(brief.tone or [])) if brief.tone else "natural cinematic color tone"
-
-    subject = f"{product_en}, close-up hero shot"
-    mood = f"mood/style: {tone_en}"
-    target_str = f"target: {target_en}" if target_en else ""
+    tone = ", ".join([t for t in (brief.tone or []) if t]) or "clean color grade"
 
     core_parts = [
-        subject,
-        f"scene: {scene_en}",
-        mood,
+        "hero product shot, commercial poster frame",
+        "minimal background, crisp composition",
+        f"mood: {tone}",
+        ANIM2D_STYLE,
         BASE_STYLE,
-        "color grade for vertical shortform video",
-        target_str,
+        "vertical shortform frame",
     ]
     core = " | ".join([p for p in core_parts if p])
 
-    flags = [f"--ar {aspect_ratio}", f"--v {version}", f"--stylize {stylize}", f"--quality {quality}"]
+    flags = [f"--ar {aspect_ratio}", f"--v {version}", f"--quality {quality}"]
     if seed is not None:
         flags.append(f"--seed {seed}")
-
-    if message_en:
-        core = f"{core} | concept: '{message_en}'"
 
     return f"{core} {' '.join(flags)}"

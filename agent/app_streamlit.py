@@ -24,42 +24,54 @@ load_dotenv()
 # 내부 모듈 임포트 (실패해도 UI는 뜨게)
 _generate = None
 _to_text_script = None
+_build_scene_prompts = None
+_build_main_prompt = None
+_parse_brief = None
 _import_error: Optional[str] = None
 try:
     from casts.pipeline import generate as _generate  # noqa: F401
     from casts.formatter import to_text_script as _to_text_script  # noqa: F401
+    from casts.mj_scene import build_scene_prompts as _build_scene_prompts  # noqa: F401
+    from casts.mj import build_midjourney_prompt as _build_main_prompt  # noqa: F401
+    from casts.brief import parse_brief as _parse_brief  # noqa: F401
 except Exception as e:
     _import_error = f"{type(e).__name__}: {e}"
 
 # ================= UI =================
 
 st.title("🎬 Shortform Scenario Agent")
-st.caption("OpenRouter `gpt-oss-20b:free` 기반 — 60초 쇼츠 시나리오 생성 (MJ prompts in English)")
+st.caption("OpenRouter `gpt-oss-20b:free` 기반 — 2-Step: 시나리오 → (버튼) 씬별 2D 애니 프롬프트")
 
 with st.sidebar:
     st.header("⚙️ Settings")
-    # 키 상태
     key_exists = bool(os.getenv("OPENROUTER_API_KEY"))
     if key_exists:
-        st.success("OPENROUTER_API_KEY: 감지됨", icon="🔑")
+        st.success("OPENROUTER_API_KEY: detected", icon="🔑")
     else:
-        st.warning("환경변수에 OPENROUTER_API_KEY가 없습니다.", icon="⚠️")
+        st.warning("Set OPENROUTER_API_KEY in env.", icon="⚠️")
 
-    # 옵션
-    equalize = st.toggle("컷 시간 균등 분배(권장)", value=True)
-    out_format = st.radio("출력 형식", ["JSON", "텍스트"], horizontal=True, index=0)
+    # 시나리오 옵션
+    equalize = st.toggle("Equalize cut times", value=True)
+    out_format = st.radio("Scenario Output", ["JSON", "TEXT"], horizontal=True, index=0)
 
-    # Midjourney 옵션
-    generate_mj = st.toggle("Midjourney 프롬프트 생성(영문)", value=True)
+    # 프롬프트 옵션 (stylize 제거됨)
     mj_ar = st.selectbox("MJ Aspect Ratio", ["9:16", "3:4", "1:1", "4:5"], index=0)
+    mj_version = st.selectbox("MJ Version", ["6.0", "6.1"], index=0)
+    mj_quality = st.selectbox("MJ Quality", ["1.0", "0.5", "2.0"], index=0)
 
     st.markdown("---")
-    st.markdown("Tip: 컷 수를 6으로 지정하면 0,10,20,30,40,50초로 자동 분배됩니다.")
+    st.markdown("Flow: 시나리오 생성 → 아래 결과 확인 → 프롬프트 생성 버튼")
 
 # 임포트 에러 공지
 if _import_error:
-    st.error(f"내부 모듈 임포트 실패: {_import_error}")
+    st.error(f"Import error: {_import_error}")
     st.info("폴더 구조/경로를 확인해주세요. 그래도 폼은 표시됩니다.")
+
+# 세션 상태 초기화
+if "scenario_data" not in st.session_state:
+    st.session_state["scenario_data"] = None
+if "brief_text" not in st.session_state:
+    st.session_state["brief_text"] = ""
 
 # 입력 폼
 with st.form("scenario_form"):
@@ -84,7 +96,7 @@ with st.form("scenario_form"):
     with cuts_col:
         cuts = st.number_input("컷 수(0=자동)", min_value=0, max_value=12, value=6, step=1)
 
-    submitted = st.form_submit_button("🚀 시나리오 생성")
+    btn_generate = st.form_submit_button("🚀 1) 시나리오 생성")
 
 
 def _kv_line(k: str, v: str) -> str:
@@ -107,38 +119,38 @@ def _build_kv_text() -> str:
     return "\n".join([x for x in lines if x])
 
 
-# ================= RUN =================
-if submitted:
-    brief_text = _build_kv_text()
-
+# ================= 1) 시나리오 생성 =================
+if btn_generate:
     if _generate is None or _to_text_script is None:
-        st.error("내부 모듈이 로드되지 않아 실행할 수 없습니다. 위의 임포트 에러를 확인하세요.")
+        st.error("내부 모듈 로드 실패. 위 임포트 에러 확인.")
     else:
-        with st.status("생성 중...", expanded=False) as status:
-            status.update(label="OpenRouter 호출 & 시나리오 생성", state="running")
+        brief_text = _build_kv_text()
+        st.session_state["brief_text"] = brief_text
+        with st.status("Generating scenario...", expanded=False) as status:
+            status.update(label="Calling OpenRouter & building scenario", state="running")
             try:
+                # 1단계는 시나리오만 생성 (MJ 프롬프트 끔)
                 data: Dict[str, Any] = _generate(
                     brief_text,
                     equalize=equalize,
-                    mj_generate=generate_mj,      # EN MJ prompts on
-                    mj_aspect_ratio=mj_ar,
+                    mj_generate=False,
                 )  # type: ignore
             except Exception as err:
-                st.error(f"예상치 못한 에러: {type(err).__name__}: {err}")
-                status.update(label="실패", state="error")
+                st.error(f"Unexpected error: {type(err).__name__}: {err}")
+                status.update(label="Failed", state="error")
             else:
-                status.update(label="완료", state="complete")
+                status.update(label="Done", state="complete")
                 st.success("시나리오 생성 완료!", icon="✅")
+                st.session_state["scenario_data"] = data
 
                 if isinstance(data, dict) and data.get("error"):
-                    st.error(f"에러: {data.get('error')}")
+                    st.error(f"Error: {data.get('error')}")
                     detail = data.get("detail") or data.get("raw")
                     if detail:
-                        with st.expander("상세 보기"):
+                        with st.expander("Raw response"):
                             st.code(str(detail))
                 else:
-                    # 텍스트/JSON 출력
-                    if out_format == "텍스트":
+                    if out_format == "TEXT":
                         try:
                             script = _to_text_script(data)  # type: ignore
                         except Exception:
@@ -150,28 +162,52 @@ if submitted:
                         except Exception:
                             st.code(json.dumps(data, ensure_ascii=False, indent=2))
 
-                    # MJ 프롬프트 섹션
-                    if isinstance(data, dict) and data.get("scene_prompts"):
-                        st.markdown("#### 🎬 Scene-by-Scene Prompts (English)")
-                        for i, p in enumerate(data["scene_prompts"], 1):
-                            st.markdown(f"**Scene {i}:**")
-                            st.code(p)
-                    if isinstance(data, dict) and data.get("midjourney_prompt"):
-                        st.markdown("#### 🎨 Main Thumbnail Prompt (English)")
-                        st.code(data["midjourney_prompt"])
+# ================= 2) 프롬프트 생성(2D 애니) =================
+st.markdown("---")
+st.subheader("🎨 2) 프롬프트 생성 (씬별 2D 애니메이션)")
 
-# 하단 도움말
-with st.expander("입력 예시 보기"):
-    st.code(
-        """제품=치킨
-메시지=바삭함과 육즙
-타깃=10대~20대
-톤=따뜻함, 레트로
-배경=퇴근길 작은 포장마차
-길이=60
-컷=6
-나레이션=담백하고 현실적으로
-음악=어쿠스틱 기타
-금지어=치료""",
-        language="text",
-    )
+btn_prompts = st.button("🎬 씬별 프롬프트 생성 (영문 키워드, stylize 제외)")
+
+if btn_prompts:
+    data = st.session_state.get("scenario_data")
+    brief_text = st.session_state.get("brief_text", "")
+    if not data:
+        st.warning("먼저 시나리오를 생성해 주세요.")
+    elif _build_scene_prompts is None or _parse_brief is None or _build_main_prompt is None:
+        st.error("내부 모듈 로드 실패. 위 임포트 에러 확인.")
+    else:
+        try:
+            brief = _parse_brief(brief_text)
+            # 씬별 2D 프롬프트 생성 (stylize 없음)
+            scene_prompts = _build_scene_prompts(
+                brief,
+                data,
+                aspect_ratio=mj_ar,
+                version=mj_version,
+            )
+            data["scene_prompts"] = scene_prompts
+
+            # 대표 썸네일 프롬프트도 2D로 생성(stylize 없음)
+            data["midjourney_prompt"] = _build_main_prompt(
+                brief,
+                data,
+                beat_index=0,
+                aspect_ratio=mj_ar,
+                version=mj_version,
+                quality=float(mj_quality),
+            )
+
+            st.success("프롬프트 생성 완료!", icon="✅")
+            st.markdown("#### 🎬 Scene Prompts (2D animation)")
+            for i, p in enumerate(scene_prompts, 1):
+                st.markdown(f"**Scene {i}:**")
+                st.code(p)
+
+            st.markdown("#### 🖼️ Main Thumbnail Prompt (2D animation)")
+            st.code(data["midjourney_prompt"])
+
+            # 세션 업데이트
+            st.session_state["scenario_data"] = data
+
+        except Exception as err:
+            st.error(f"Unexpected error: {type(err).__name__}: {err}")

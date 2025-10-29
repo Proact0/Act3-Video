@@ -14,10 +14,10 @@ def to_text_script(data: Dict[str, Any]) -> str:
         dialog = b.get("dialog", "")
         out.append(f"\n[{i}] t={t:>2}s  SCENE: {scene}\n    DIALOG: {dialog}")
 
-    # 씬별 MJ 프롬프트(영문)
+    # 씬별 MJ 프롬프트(영문 키워드)
     scene_prompts = data.get("scene_prompts")
     if scene_prompts:
-        out.append("\n---\n🎬 Scene-by-Scene Image Prompts (English)")
+        out.append("\n---\n🎬 Scene Prompts (EN keywords)")
         for i, p in enumerate(scene_prompts, 1):
             out.append(f"{i}. {p}")
 
