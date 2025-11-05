@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "main": "casts/reflection/workflow.py:reflection_workflow"
+  },
+  "env": ".venv"
+}

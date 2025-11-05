@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "plan_execute": "./sample/PlanExecute_example/cast/workflow.py:plan_execute_workflow"
+  },
+  "env": ".venv"
+}

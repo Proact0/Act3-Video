@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "langgraph",
+    "langchain",
+    "langchain-community",
+    "langchain-text-splitters"
+  ],
+  "graphs": {
+    "main": "./casts/workflow.py:rag_workflow"
+  }
+}
